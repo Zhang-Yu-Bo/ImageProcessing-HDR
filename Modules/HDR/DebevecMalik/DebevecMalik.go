@@ -24,6 +24,8 @@ func weightValue(value float64) float64 {
 }
 
 func PixelSampling(N int) {
+	fmt.Println("DebevecMalik Sampling Begin")
+	nowTime := time.Now()
 	// 隨機取樣
 	//rand.Seed(time.Now().UnixNano())
 	//samplePixels = []Vec2{}
@@ -43,12 +45,12 @@ func PixelSampling(N int) {
 	samplesTemp := 0
 	for i := gridWidth; i < Common.WidthOfImage; i += gridWidth {
 		for j := gridHeight; j < Common.HeightOfImage; j += gridHeight {
-			randVec2 := Common.Vec2{X: i, Y: j}
-			fmt.Println(randVec2)
-			samplePixels = append(samplePixels, randVec2)
+			sample := Common.Vec2{X: i, Y: j}
+			samplePixels = append(samplePixels, sample)
 			samplesTemp++
 		}
 	}
+	// 不足的用隨機取點的方式補
 	rand.Seed(time.Now().UnixNano())
 	for ; samplesTemp < N; samplesTemp++ {
 		randVec2 := Common.Vec2{
@@ -58,11 +60,15 @@ func PixelSampling(N int) {
 		fmt.Println(randVec2)
 		samplePixels = append(samplePixels, randVec2)
 	}
+	fmt.Println("DebevecMalik Sampling End:", time.Now().Sub(nowTime))
 }
 
 func GenerateFunctionGz() error {
+	fmt.Println("DebevecMalik Generate Function g(Zij) Begin")
+	nowTime := time.Now()
 	functionGz = [][]float64{}
 
+	// 建立三個色彩通道的matrix以恢復各別的 g(Zij) 曲線
 	for c := 0; c < 3; c++ {
 		n := 256
 		matrixA := mat.NewDense(Common.NumOfSamplePixels*Common.NumOfImages+n+1, n+Common.NumOfSamplePixels, nil)
@@ -124,7 +130,7 @@ func GenerateFunctionGz() error {
 		var tempFunctionGz []float64
 		for i := 0; i < 256; i++ {
 			tempFunctionGz = append(tempFunctionGz, X.At(i, 0))
-			fmt.Println(X.At(i, 0))
+			//fmt.Println(X.At(i, 0))
 		}
 		functionGz = append(functionGz, tempFunctionGz)
 
@@ -143,12 +149,16 @@ func GenerateFunctionGz() error {
 		//	fmt.Println(x.At(i, 0))
 		//}
 	}
+	fmt.Println("DebevecMalik Generate Function g(Zij) End:", time.Now().Sub(nowTime))
 	return nil
 }
 
-func GenerateRadianceE() {
+func CalculateRadianceE() {
+	fmt.Println("DebevecMalik Generate RadianceE Begin")
+	nowTime := time.Now()
 	Common.RadianceE = [][][]float64{}
 
+	// 透過各別的 g(Zij) 去計算出真實場景的能量分布
 	for c := 0; c < 3; c++ {
 		minValue := math.MaxFloat64
 		maxValue := 0.0
@@ -194,6 +204,7 @@ func GenerateRadianceE() {
 			tempRadianceSlice = append(tempRadianceSlice, tempE)
 		}
 		Common.RadianceE = append(Common.RadianceE, tempRadianceSlice)
-		fmt.Println(maxValue, minValue)
+		fmt.Println("[", maxValue, minValue, "]")
 	}
+	fmt.Println("DebevecMalik Generate RadianceE End:", time.Now().Sub(nowTime))
 }

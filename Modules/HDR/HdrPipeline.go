@@ -8,7 +8,8 @@ import (
 	_ "image/png"
 )
 
-func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64) error {
+func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64, numOfSampling int) error {
+	Common.NumOfSamplePixels = numOfSampling
 	Common.NumOfImages = len(fileName)
 	if Common.NumOfImages != len(exposureTime) {
 		return errors.New("num of file is not equal to num of exposure time")
@@ -17,11 +18,15 @@ func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64) 
 		return err
 	}
 
+	// HDR pipeline: Sampling -> Fill Matrix -> Calculate g(Zij) -> Calculate RadianceE
 	DebevecMalik.PixelSampling(Common.NumOfSamplePixels)
 	if err := DebevecMalik.GenerateFunctionGz(); err != nil {
 		return err
 	}
-	DebevecMalik.GenerateRadianceE()
+	DebevecMalik.CalculateRadianceE()
+
+	Common.GenerateLdrImage()
+	// Output Ldr Image
 	if err := Common.SaveAsPng(); err != nil {
 		return err
 	}
