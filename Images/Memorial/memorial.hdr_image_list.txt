@@ -18,4 +18,4 @@ memorial0074.ppm 256     8 0 0
 memorial0075.ppm 512     8 0 0
 memorial0076.ppm 1024    8 0 0
 
-497x716 (px)
+494x716 (px)

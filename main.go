@@ -1,5 +1,5 @@
-package ImageProcessing_HDR
+package main
 
 func main() {
-
+	
 }
