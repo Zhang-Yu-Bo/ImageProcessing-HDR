@@ -89,9 +89,29 @@ func GenerateLdrImage() {
 
 	for i := 0; i < WidthOfImage; i++ {
 		for j := 0; j < HeightOfImage; j++ {
-			colorR := ToneMapping.ToonMappingACES(RadianceE[ColorRed][i][j], lumAvg) * 255
-			colorG := ToneMapping.ToonMappingACES(RadianceE[ColorGreen][i][j], lumAvg) * 255
-			colorB := ToneMapping.ToonMappingACES(RadianceE[ColorBlue][i][j], lumAvg) * 255
+			colorR := ToneMapping.ACES(RadianceE[ColorRed][i][j], lumAvg) * 255
+			colorG := ToneMapping.ACES(RadianceE[ColorGreen][i][j], lumAvg) * 255
+			colorB := ToneMapping.ACES(RadianceE[ColorBlue][i][j], lumAvg) * 255
+			//colorR := ToneMapping.Reinhard(RadianceE[ColorRed][i][j], lumAvg, 1.0) * 255
+			//colorG := ToneMapping.Reinhard(RadianceE[ColorGreen][i][j], lumAvg, 1.0) * 255
+			//colorB := ToneMapping.Reinhard(RadianceE[ColorBlue][i][j], lumAvg, 1.0) * 255
+			//colorR := ToneMapping.CE(RadianceE[ColorRed][i][j], lumAvg) * 255
+			//colorG := ToneMapping.CE(RadianceE[ColorGreen][i][j], lumAvg) * 255
+			//colorB := ToneMapping.CE(RadianceE[ColorBlue][i][j], lumAvg) * 255
+			//colorR := ToneMapping.Uncharted2(RadianceE[ColorRed][i][j], lumAvg, 11.2) * 255
+			//colorG := ToneMapping.Uncharted2(RadianceE[ColorGreen][i][j], lumAvg, 11.2) * 255
+			//colorB := ToneMapping.Uncharted2(RadianceE[ColorBlue][i][j], lumAvg, 11.2) * 255
+
+			// clipping
+			if colorR > 255 {
+				colorR = 255
+			}
+			if colorG > 255 {
+				colorG = 255
+			}
+			if colorB > 255 {
+				colorB = 255
+			}
 			outputImage.Set(i, j, color.RGBA{
 				R: uint8(colorR),
 				G: uint8(colorG),
