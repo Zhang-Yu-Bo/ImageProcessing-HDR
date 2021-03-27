@@ -19,10 +19,9 @@ var (
 )
 
 func weightValue(value float64) float64 {
-	if value <= 128 {
-		return value
-	}
-	return 255 - value
+	middle := value-128
+	// 二次曲線
+	return -middle*middle/65 + 256
 }
 
 func PixelSampling(N int) {
@@ -95,7 +94,7 @@ func GenerateFunctionGz() error {
 					break
 				}
 				ans = ans >> 8
-				wValue := weightValue(float64(ans) + 1)
+				wValue := weightValue(float64(ans))
 				//wValue := weightValue(float64(ans))
 				matrixA.Set(k, int(ans), wValue)
 				matrixA.Set(k, n+i, -wValue)
@@ -106,7 +105,7 @@ func GenerateFunctionGz() error {
 		matrixA.Set(k, 128, 1)
 		k++
 		for i := 0; i < n-2; i++ {
-			wValue := weightValue(float64(i) + 1)
+			wValue := weightValue(float64(i))
 			//wValue := weightValue(float64(i))
 			matrixA.Set(k, i, wValue)
 			matrixA.Set(k, i+1, -2*wValue)

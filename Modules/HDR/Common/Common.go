@@ -4,6 +4,7 @@ import (
 	"ImageProcessing_HDR/Modules/ToneMapping"
 	"errors"
 	"fmt"
+	"gocv.io/x/gocv"
 	"image"
 	"image/color"
 	"image/png"
@@ -136,6 +137,21 @@ func SaveAsPng() error{
 	}
 	fmt.Println("Create Image:", "output.png")
 	return nil
+}
+
+func SaveAsHdr() {
+	hdrImage := gocv.NewMatWithSize(HeightOfImage, WidthOfImage, gocv.MatTypeCV32FC3)
+	for i := 0; i < WidthOfImage; i++ {
+		for j := 0; j < HeightOfImage; j++ {
+			// Blue
+			hdrImage.SetFloatAt(j, i * 3 + 0, float32(RadianceE[ColorBlue][i][j]))
+			// Green
+			hdrImage.SetFloatAt(j, i * 3 + 1, float32(RadianceE[ColorGreen][i][j]))
+			// Red
+			hdrImage.SetFloatAt(j, i * 3 + 2, float32(RadianceE[ColorRed][i][j]))
+		}
+	}
+	gocv.IMWrite("output.hdr", hdrImage)
 }
 
 func CloseFile(file *os.File) {

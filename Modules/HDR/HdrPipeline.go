@@ -6,6 +6,8 @@ import (
 	"errors"
 	_ "image/jpeg"
 	_ "image/png"
+	"runtime"
+	"sync"
 )
 
 func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64, numOfSampling int) error {
@@ -25,11 +27,19 @@ func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64, 
 	}
 	DebevecMalik.CalculateRadianceE()
 
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	wg := sync.WaitGroup{}
+	wg.Add(1)
+	go func() {
+		Common.SaveAsHdr()
+		wg.Done()
+	}()
 	Common.GenerateLdrImage()
 	// Output Ldr Image
 	if err := Common.SaveAsPng(); err != nil {
 		return err
 	}
+	wg.Wait()
 
 	return nil
 }
