@@ -68,6 +68,10 @@ func LoadImageFiles(fileName []string, exposureTime []float64) error {
 	return nil
 }
 
+func GetGrayValue(red, green, blue float64) float64 {
+	return 0.299*red + 0.587*green + 0.114*blue
+}
+
 func CalculateLuminanceAvg() float64 {
 	// Calculate the average luminance
 	var lumAvg float64
@@ -75,9 +79,10 @@ func CalculateLuminanceAvg() float64 {
 
 	for i := 0; i < WidthOfImage; i++ {
 		for j := 0; j < HeightOfImage; j++ {
-			lumAvg += (0.299*RadianceE[ColorRed][i][j] +
-				0.587*RadianceE[ColorGreen][i][j] +
-				0.114*RadianceE[ColorBlue][i][j]) / numOfPixels
+			lumAvg += GetGrayValue(
+				RadianceE[ColorRed][i][j],
+				RadianceE[ColorGreen][i][j],
+				RadianceE[ColorBlue][i][j]) / numOfPixels
 		}
 	}
 	fmt.Println("Luminance Average:", lumAvg)

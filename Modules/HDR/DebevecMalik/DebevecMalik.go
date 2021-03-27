@@ -95,7 +95,6 @@ func GenerateFunctionGz() error {
 				}
 				ans = ans >> 8
 				wValue := weightValue(float64(ans))
-				//wValue := weightValue(float64(ans))
 				matrixA.Set(k, int(ans), wValue)
 				matrixA.Set(k, n+i, -wValue)
 				matrixB.Set(k, 0, wValue*math.Log(Common.ExposureTimes[j]))
@@ -106,7 +105,6 @@ func GenerateFunctionGz() error {
 		k++
 		for i := 0; i < n-2; i++ {
 			wValue := weightValue(float64(i))
-			//wValue := weightValue(float64(i))
 			matrixA.Set(k, i, wValue)
 			matrixA.Set(k, i+1, -2*wValue)
 			matrixA.Set(k, i+2, wValue)
