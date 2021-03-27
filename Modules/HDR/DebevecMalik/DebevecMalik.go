@@ -143,13 +143,11 @@ func GenerateFunctionGz() error {
 		//rank := svd.Rank(rcond)
 		//var x mat.Dense
 		//svd.SolveTo(&x, matrixB, rank)
-		//FunctionGx = []float64{}
-		//FunctionGy = []float64{}
+		//var tempFunctionGz []float64
 		//for i := 0; i < 256; i++ {
-		//	FunctionGx = append(FunctionGx, float64(i))
-		//	FunctionGy = append(FunctionGy, x.At(i, 0))
-		//	fmt.Println(x.At(i, 0))
+		//	tempFunctionGz = append(tempFunctionGz, x.At(i, 0))
 		//}
+		//functionGz = append(functionGz, tempFunctionGz)
 	}
 	fmt.Println("DebevecMalik Generate Function g(Zij) End:", time.Now().Sub(nowTime))
 	return nil
