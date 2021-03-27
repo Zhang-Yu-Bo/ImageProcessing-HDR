@@ -6,6 +6,8 @@ import (
 	"gonum.org/v1/gonum/mat"
 	"math"
 	"math/rand"
+	"runtime"
+	"sync"
 	"time"
 )
 
@@ -158,53 +160,73 @@ func CalculateRadianceE() {
 	nowTime := time.Now()
 	Common.RadianceE = [][][]float64{}
 
-	// 透過各別的 g(Zij) 去計算出真實場景的能量分布
-	for c := 0; c < 3; c++ {
-		minValue := math.MaxFloat64
-		maxValue := 0.0
+	// initialization [Common.RadianceE]
+	for c:=0; c < 3; c++ {
 		var tempRadianceSlice [][]float64
 		for i := 0; i < Common.WidthOfImage; i++ {
 			var tempE []float64
 			for j := 0; j < Common.HeightOfImage; j++ {
-				var sumOfRadiance float64
-				var sumOfWeight float64
-				for p := 0; p < Common.NumOfImages; p++ {
-					var ans uint32
-					switch c {
-					case Common.ColorRed:
-						r, _, _, _ := Common.DataOfImages[p].At(i, j).RGBA()
-						ans = r
-						break
-					case Common.ColorGreen:
-						_, g, _, _ := Common.DataOfImages[p].At(i, j).RGBA()
-						ans = g
-						break
-					case Common.ColorBlue:
-						_, _, b, _ := Common.DataOfImages[p].At(i, j).RGBA()
-						ans = b
-						break
-					}
-					ans = ans >> 8
-					wValue := weightValue(float64(ans))
-					sumOfRadiance += wValue * (functionGz[c][ans] - math.Log(Common.ExposureTimes[p]))
-					sumOfWeight += wValue
-				}
-				if sumOfWeight == 0 {
-					sumOfWeight = 1
-				}
-				tempRadianceE := math.Pow(math.E, sumOfRadiance/sumOfWeight)
-				tempE = append(tempE, tempRadianceE)
-				if tempRadianceE < minValue {
-					minValue = tempRadianceE
-				}
-				if tempRadianceE > maxValue {
-					maxValue = tempRadianceE
-				}
+				tempE = append(tempE, 0)
 			}
 			tempRadianceSlice = append(tempRadianceSlice, tempE)
 		}
 		Common.RadianceE = append(Common.RadianceE, tempRadianceSlice)
-		fmt.Println("[", maxValue, minValue, "]")
 	}
+
+	// set max process to work
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	// check calculate is done
+	wg := sync.WaitGroup{}
+	// 透過各別的 g(Zij) 去計算出真實場景的能量分布
+	for c := 0; c < 3; c++ {
+		wg.Add(1)
+		go func(channelIndex int) {
+			defer wg.Done()
+			minValue := math.MaxFloat64
+			maxValue := 0.0
+			for i := 0; i < Common.WidthOfImage; i++ {
+				for j := 0; j < Common.HeightOfImage; j++ {
+					var sumOfRadiance float64
+					var sumOfWeight float64
+					for p := 0; p < Common.NumOfImages; p++ {
+						var ans uint32
+						switch channelIndex {
+						case Common.ColorRed:
+							r, _, _, _ := Common.DataOfImages[p].At(i, j).RGBA()
+							ans = r
+							break
+						case Common.ColorGreen:
+							_, g, _, _ := Common.DataOfImages[p].At(i, j).RGBA()
+							ans = g
+							break
+						case Common.ColorBlue:
+							_, _, b, _ := Common.DataOfImages[p].At(i, j).RGBA()
+							ans = b
+							break
+						}
+						ans = ans >> 8
+						wValue := weightValue(float64(ans))
+						// sigma( (g(Zij) - ln(Tj)) * weight ) for j = 0 to NumOfImages
+						sumOfRadiance += wValue * (functionGz[channelIndex][ans] - math.Log(Common.ExposureTimes[p]))
+						sumOfWeight += wValue
+					}
+					if sumOfWeight == 0 {
+						sumOfWeight = 1
+					}
+					tempRadianceE := math.Pow(math.E, sumOfRadiance/sumOfWeight)
+					Common.RadianceE[channelIndex][i][j] = tempRadianceE
+					if tempRadianceE < minValue {
+						minValue = tempRadianceE
+					}
+					if tempRadianceE > maxValue {
+						maxValue = tempRadianceE
+					}
+				}
+			}
+			fmt.Println("[", maxValue, minValue, "]")
+		}(c)
+	}
+	// if calculate is not over, then wait
+	wg.Wait()
 	fmt.Println("DebevecMalik Generate RadianceE End:", time.Now().Sub(nowTime))
 }
