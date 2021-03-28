@@ -36,6 +36,8 @@ func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64, 
 		wg.Done()
 	}()
 
+	Common.GenerateLumByRadianceE()
+	Common.GenerateLocalLumAvgMatrix()
 	Common.GenerateLdrImage()
 	// Output Ldr Image
 	if err := Common.SaveAsPng(); err != nil {
