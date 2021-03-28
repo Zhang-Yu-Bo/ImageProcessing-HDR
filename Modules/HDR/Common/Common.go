@@ -144,7 +144,7 @@ func SaveAsPng() error{
 	return nil
 }
 
-func SaveAsHdr() {
+func SaveAsHdrFormat() {
 	hdrImage := gocv.NewMatWithSize(HeightOfImage, WidthOfImage, gocv.MatTypeCV32FC3)
 	for i := 0; i < WidthOfImage; i++ {
 		for j := 0; j < HeightOfImage; j++ {
@@ -157,6 +157,7 @@ func SaveAsHdr() {
 		}
 	}
 	gocv.IMWrite("output.hdr", hdrImage)
+	gocv.IMWrite("output.exr", hdrImage)
 }
 
 func CloseFile(file *os.File) {

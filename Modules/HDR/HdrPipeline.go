@@ -27,13 +27,15 @@ func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64, 
 	}
 	DebevecMalik.CalculateRadianceE()
 
+	// 因為hdr format的照片通常較大張，因此多執行緒去進行儲存
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 	go func() {
-		Common.SaveAsHdr()
+		Common.SaveAsHdrFormat()
 		wg.Done()
 	}()
+
 	Common.GenerateLdrImage()
 	// Output Ldr Image
 	if err := Common.SaveAsPng(); err != nil {
