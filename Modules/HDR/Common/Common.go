@@ -1,6 +1,7 @@
 package Common
 
 import (
+	"ImageProcessing_HDR/Modules/ToneMapping"
 	"errors"
 	"fmt"
 	"gocv.io/x/gocv"
@@ -9,6 +10,8 @@ import (
 	"image/png"
 	"math"
 	"os"
+	"runtime"
+	"sync"
 	"time"
 )
 
@@ -22,6 +25,17 @@ const (
 	ColorGreen			= 1
 	ColorBlue			= 2
 )
+
+type TmpAction int
+const LocalToneMapping 	TmpAction = 3
+const GlobalToneMapping TmpAction = 4
+
+type TmpType int
+const Aces 				TmpType = 5
+const Reinhard 			TmpType = 6
+const CE 				TmpType = 7
+const Uncharted2 		TmpType = 8
+const ReinhardEnhance	TmpType = 9
 
 var (
 	// 總共取幾點去計算 g(Zij)
@@ -41,6 +55,7 @@ var (
 	OriginLum   		[][]float64
 	// LocalLumMatrix[]: x(width, col) LocalLumMatrix[][]: y(height, row)
 	LocalLumMatrix 		[][]float64
+	GlobalLumAvg		float64
 	outputImage 		*image.RGBA
 )
 
@@ -80,8 +95,23 @@ func GetGrayValue(red, green, blue float64) float64 {
 	return 0.299*red + 0.587*green + 0.114*blue
 }
 
+func CalculateGlobalLumAvg() {
+	GlobalLumAvg = 0.0
+	numOfPixels := float64(WidthOfImage) * float64(HeightOfImage)
+
+	for i := 0; i < WidthOfImage; i++ {
+		for j := 0; j < HeightOfImage; j++ {
+			GlobalLumAvg += GetGrayValue(
+				RadianceE[ColorRed][i][j],
+				RadianceE[ColorGreen][i][j],
+				RadianceE[ColorBlue][i][j],
+			) / numOfPixels
+		}
+	}
+}
+
 // Generate OriginLum, LumMatrix and LumWhite By RadianceE
-func GenerateLumByRadianceE() {
+func GenerateLumByRadianceE(a float64) {
 	deltaAvoidSingular := 0.00001
 	numOfPixels := float64(WidthOfImage) * float64(HeightOfImage)
 
@@ -106,7 +136,6 @@ func GenerateLumByRadianceE() {
 	fmt.Println("Luminance White:", LumWhite)
 
 	// OriginLum
-	a := 0.45
 	OriginLum = [][]float64{}
 	// x, col
 	for i := 0; i < WidthOfImage; i++ {
@@ -119,17 +148,16 @@ func GenerateLumByRadianceE() {
 	}
 }
 
-func GenerateLocalLumAvgMatrix() {
+func GenerateLocalLumAvgMatrix(alpha, ratio, epsilon, phi, a float64) {
 	fmt.Println("Generate Local LumAvg Matrix Begin")
 	nowTime := time.Now()
 
 	// init
+	runtime.GOMAXPROCS(runtime.NumCPU())
+	var wg sync.WaitGroup
 	LocalLumMatrix = CreateSpace2D(HeightOfImage, WidthOfImage)
-	alpha1 := 1 / (2 * math.Sqrt2)
-	alpha2 := 1.6 * alpha1
-	epsilon := 0.05
-	phi := 15.0
-	a := 0.45
+	alpha1 := alpha
+	alpha2 := ratio * alpha1
 
 	kernelSize := 51
 	R1 := CreateSpace3D(kernelSize, kernelSize, 9)
@@ -141,7 +169,7 @@ func GenerateLocalLumAvgMatrix() {
 		for j := 0; j < kernelSize; j++ {
 			// z, depth
 			for k := 1; k < 10; k++ {
-				ss := math.Pow(1.6, float64(k-1))
+				ss := math.Pow(ratio, float64(k-1))
 				R1[i][j][k-1] = (1 / (math.Pi * math.Pow(alpha1*ss, 2))) *
 					(math.Exp(-(float64((i-kernelSize/2)*(i-kernelSize/2)) +
 						float64((j-kernelSize/2)*(j-kernelSize/2))) / math.Pow(alpha1*ss, 2)))
@@ -152,52 +180,47 @@ func GenerateLocalLumAvgMatrix() {
 		}
 	}
 
+	V := CreateSpace3D(HeightOfImage, WidthOfImage, 9)
 	V1 := CreateSpace3D(HeightOfImage, WidthOfImage, 9)
 	V2 := CreateSpace3D(HeightOfImage, WidthOfImage, 9)
 	// z, depth
 	for k := 0; k < 9; k++ {
-		// x, col
-		for i := 0; i < WidthOfImage; i++ {
-			// y, row
-			for j := 0; j < HeightOfImage; j++ {
-				r1Sum := 0.0
-				r2Sum := 0.0
-				for m :=0; m < kernelSize; m++{
-					for n := 0; n < kernelSize; n++ {
-						var newX, newY = m - kernelSize/2 + i, n - kernelSize/2 + j
-						if newX < 0 {
-							newX = 0
-						} else if newX >= WidthOfImage {
-							newX = WidthOfImage - 1
+		wg.Add(1)
+		go func(k int) {
+			defer wg.Done()
+			ss := math.Pow(ratio, float64(k))
+			// x, col
+			for i := 0; i < WidthOfImage; i++ {
+				// y, row
+				for j := 0; j < HeightOfImage; j++ {
+					r1Sum := 0.0
+					r2Sum := 0.0
+					for m :=0; m < kernelSize; m++{
+						for n := 0; n < kernelSize; n++ {
+							var newX, newY = m - kernelSize/2 + i, n - kernelSize/2 + j
+							if newX < 0 {
+								newX = 0
+							} else if newX >= WidthOfImage {
+								newX = WidthOfImage - 1
+							}
+							if newY < 0 {
+								newY = 0
+							}else if newY >= HeightOfImage {
+								newY = HeightOfImage - 1
+							}
+							r1Sum += R1[m][n][k] * OriginLum[newX][newY]
+							r2Sum += R2[m][n][k] * OriginLum[newX][newY]
 						}
-						if newY < 0 {
-							newY = 0
-						}else if newY >= HeightOfImage {
-							newY = HeightOfImage - 1
-						}
-						r1Sum += R1[m][n][k] * OriginLum[newX][newY]
-						r2Sum += R2[m][n][k] * OriginLum[newX][newY]
 					}
+					V1[i][j][k] = r1Sum
+					V2[i][j][k] = r2Sum
+					V[i][j][k] = (V1[i][j][k] - V2[i][j][k]) /
+						(math.Pow(2, phi)*(a/math.Pow(ss, 2)) + V1[i][j][k])
 				}
-				V1[i][j][k] = r1Sum
-				V2[i][j][k] = r2Sum
 			}
-		}
+		}(k)
 	}
-
-	V := CreateSpace3D(HeightOfImage, WidthOfImage, 9)
-	// x, col
-	for i := 0; i < WidthOfImage; i++ {
-		// y, row
-		for j := 0; j < HeightOfImage; j++ {
-			// z, depth
-			for k := 1; k < 10; k++ {
-				ss := math.Pow(1.6, float64(k-1))
-				V[i][j][k-1] = (V1[i][j][k-1] - V2[i][j][k-1]) /
-					(math.Pow(2, phi)*(a/math.Pow(ss, 2)) + V1[i][j][k-1])
-			}
-		}
-	}
+	wg.Wait()
 
 	for i := 0; i < WidthOfImage; i++ {
 		for j := 0; j < HeightOfImage; j++ {
@@ -207,51 +230,60 @@ func GenerateLocalLumAvgMatrix() {
 					break
 				}
 				if k != 9 {
-					ss *= 1.6
+					ss *= ratio
 				}
 			}
-			p := 1 + math.Round(math.Log(ss)/math.Log(1.6))
+			p := 1 + math.Round(math.Log(ss)/math.Log(ratio))
 			if p > 8 {
 				p = 8
 			}
 			LocalLumMatrix[i][j] = OriginLum[i][j]/(1+V1[i][j][int(p)])
 		}
 	}
-	fmt.Println(LocalLumMatrix)
 	fmt.Println("Generate Local LumAvg Matrix End:", time.Now().Sub(nowTime))
 }
 
-func GenerateLdrImage() {
+func TmpOperate(color float64, tmpAction TmpAction, tmpType TmpType, i, j int) float64 {
+	var lumAvg float64
+	if tmpAction == LocalToneMapping {
+		lumAvg = LocalLumMatrix[i][j] / LumMatrix[i][j]
+	} else { // default Global
+		lumAvg = GlobalLumAvg
+	}
+
+	if tmpType == Reinhard {
+		if tmpAction == LocalToneMapping {
+			color = ToneMapping.Reinhard(color, LumMatrix[i][j], LocalLumMatrix[i][j])
+		} else { // default Global
+			color = ToneMapping.Reinhard(color, GlobalLumAvg, 1)
+		}
+	} else if tmpType == CE {
+		color = ToneMapping.CE(color, lumAvg)
+	} else if tmpType == Uncharted2 {
+		color = ToneMapping.Uncharted2(color, lumAvg, 11.2)
+	} else if tmpType == ReinhardEnhance && tmpAction == LocalToneMapping {
+		color = (color / LumMatrix[i][j]) * LocalLumMatrix[i][j]
+	} else { // default ACES
+		color = ToneMapping.ACES(color, lumAvg)
+
+	}
+	return color
+}
+
+func GenerateLdrImage(tmpAction TmpAction, tmpType TmpType) {
 	outputImage = image.NewRGBA(image.Rect(0, 0, WidthOfImage, HeightOfImage))
 
 	for i := 0; i < WidthOfImage; i++ {
 		for j := 0; j < HeightOfImage; j++ {
-			//colorR := ToneMapping.ACES(RadianceE[ColorRed][i][j], LocalLumMatrix[i][j]) * 255
-			//colorG := ToneMapping.ACES(RadianceE[ColorGreen][i][j], LocalLumMatrix[i][j]) * 255
-			//colorB := ToneMapping.ACES(RadianceE[ColorBlue][i][j], LocalLumMatrix[i][j]) * 255
-			//colorR := ToneMapping.Reinhard(RadianceE[ColorRed][i][j], LumWhite, 1.0) * 255
-			//colorG := ToneMapping.Reinhard(RadianceE[ColorGreen][i][j], LumWhite, 1.0) * 255
-			//colorB := ToneMapping.Reinhard(RadianceE[ColorBlue][i][j], LumWhite, 1.0) * 255
-			//colorR := ToneMapping.CE(RadianceE[ColorRed][i][j], LumWhite) * 255
-			//colorG := ToneMapping.CE(RadianceE[ColorGreen][i][j], LumWhite) * 255
-			//colorB := ToneMapping.CE(RadianceE[ColorBlue][i][j], LumWhite) * 255
-			//colorR := ToneMapping.Uncharted2(RadianceE[ColorRed][i][j], LumWhite, 11.2) * 255
-			//colorG := ToneMapping.Uncharted2(RadianceE[ColorGreen][i][j], LumWhite, 11.2) * 255
-			//colorB := ToneMapping.Uncharted2(RadianceE[ColorBlue][i][j], LumWhite, 11.2) * 255
-			colorR := (RadianceE[ColorRed][i][j] / LumMatrix[i][j]) * LocalLumMatrix[i][j] * 255
-			colorG := (RadianceE[ColorGreen][i][j] / LumMatrix[i][j]) * LocalLumMatrix[i][j] * 255
-			colorB := (RadianceE[ColorBlue][i][j] / LumMatrix[i][j]) * LocalLumMatrix[i][j] * 255
-
+			// Tone mapping
+			colorR := TmpOperate(RadianceE[ColorRed][i][j], tmpAction, tmpType, i, j) * 255
+			colorG := TmpOperate(RadianceE[ColorGreen][i][j], tmpAction, tmpType, i, j) * 255
+			colorB := TmpOperate(RadianceE[ColorBlue][i][j], tmpAction, tmpType, i, j) * 255
 			// clipping
-			if colorR > 255 {
-				colorR = 255
-			}
-			if colorG > 255 {
-				colorG = 255
-			}
-			if colorB > 255 {
-				colorB = 255
-			}
+			colorR = Clipping(colorR)
+			colorG = Clipping(colorG)
+			colorB = Clipping(colorB)
+			// Output
 			outputImage.Set(i, j, color.RGBA{
 				R: uint8(colorR),
 				G: uint8(colorG),
@@ -260,6 +292,16 @@ func GenerateLdrImage() {
 			})
 		}
 	}
+}
+
+// clip the color which bigger than 255, or smaller than 0
+func Clipping(color float64) float64 {
+	if color > 255 {
+		color = 255
+	} else if color < 0 {
+		color = 0
+	}
+	return color
 }
 
 func SaveAsPng() error{

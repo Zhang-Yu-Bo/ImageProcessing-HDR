@@ -6,11 +6,12 @@ import (
 	"errors"
 	_ "image/jpeg"
 	_ "image/png"
+	"math"
 	"runtime"
 	"sync"
 )
 
-func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64, numOfSampling int) error {
+func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64, numOfSampling int, tmpAction Common.TmpAction, tmpType Common.TmpType) error {
 	Common.NumOfSamplePixels = numOfSampling
 	Common.NumOfImages = len(fileName)
 	if Common.NumOfImages != len(exposureTime) {
@@ -36,9 +37,23 @@ func RecoverHdrImageWithExposureTime(fileName []string, exposureTime []float64, 
 		wg.Done()
 	}()
 
-	Common.GenerateLumByRadianceE()
-	Common.GenerateLocalLumAvgMatrix()
-	Common.GenerateLdrImage()
+	if tmpAction == Common.LocalToneMapping {
+		// magic number
+		alpha := 1 / (2 * math.Sqrt2)
+		// gaussian scale size ratio, 1.6較接近拉普拉斯
+		ratio := 1.6
+		// 誤差
+		epsilon := 0.05
+		// 整體銳度
+		phi := 15.0
+		// 整體亮度
+		a := 0.45
+		Common.GenerateLumByRadianceE(a)
+		Common.GenerateLocalLumAvgMatrix(alpha, ratio, epsilon, phi, a)
+	} else { // tmpAction == Common.GlobalToneMapping
+		Common.CalculateGlobalLumAvg()
+	}
+	Common.GenerateLdrImage(tmpAction, tmpType)
 	// Output Ldr Image
 	if err := Common.SaveAsPng(); err != nil {
 		return err

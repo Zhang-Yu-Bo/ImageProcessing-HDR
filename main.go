@@ -2,6 +2,7 @@ package main
 
 import (
 	"ImageProcessing_HDR/Modules/HDR"
+	"ImageProcessing_HDR/Modules/HDR/Common"
 	"fmt"
 )
 
@@ -37,7 +38,12 @@ func main() {
 	//	listOfExposureTime[i] /= 8
 	//}
 
-	if err := HDR.RecoverHdrImageWithExposureTime(listOfFileName, listOfExposureTime, 900); err != nil {
+	if err := HDR.RecoverHdrImageWithExposureTime(
+					listOfFileName,
+					listOfExposureTime,
+					900,
+					Common.LocalToneMapping,
+					Common.ReinhardEnhance); err != nil {
 		fmt.Println(err.Error())
 	}
 }
