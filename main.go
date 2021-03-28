@@ -34,9 +34,6 @@ func main() {
 	//	1, 0.5, 0.25, 0.125,
 	//	0.0625, 0.03125, 0.015625,
 	//}
-	//for i := 0; i < len(listOfExposureTime); i++ {
-	//	listOfExposureTime[i] /= 8
-	//}
 
 	if err := HDR.RecoverHdrImageWithExposureTime(
 					listOfFileName,
