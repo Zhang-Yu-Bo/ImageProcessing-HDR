@@ -3,37 +3,90 @@ package main
 import (
 	"ImageProcessing_HDR/Modules/HDR"
 	"ImageProcessing_HDR/Modules/HDR/Common"
+	"bufio"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
 )
 
+func CheckArgusIsEnough(i *int, length int) {
+	if *i++; *i >= length {
+		panic(os.Args[*i] + ": argument not enough.")
+	}
+}
+
 func main() {
-	imgPath := "./Images/Memorial/"
-	listOfFileName := []string{
-		"61.png", "62.png", "63.png", "64.png",
-		"65.png", "66.png", "67.png", "68.png",
-		"69.png", "70.png", "71.png", "72.png",
-		"73.png", "74.png", "75.png", "76.png",
+	argsWithoutProg := os.Args[1:]
+	argsLen := len(argsWithoutProg)
+	var mFilepath string
+	var mMatchPattern string
+	var listOfFileName []string
+
+	// Read arguments
+	// ex1: ./main.exe -path ./Images/Memorial -match *.png
+	// ex2: ./main.exe -path ./Images/Exposures -match img??.jpg
+	if argsLen <= 0 {
+		panic("There is no arguments.")
 	}
-	//imgPath := "./Images/NMMST/"
-	//listOfFileName := []string{
-	//	"1.jpg", "2.jpg", "3.jpg", "4.jpg",
-	//	"5.jpg", "6.jpg", "7.jpg", "8.jpg",
-	//	"9.jpg", "10.jpg", "11.jpg",
-	//}
-	for i := 0; i < len(listOfFileName); i++ {
-		listOfFileName[i] = imgPath + listOfFileName[i]
+	for i :=0; i < argsLen;i++ {
+		if argsWithoutProg[i] == "-path" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			mFilepath = argsWithoutProg[i]
+			if _, err := os.Stat(mFilepath); /*os.IsNotExist(err)*/ err != nil {
+				panic(err)
+			}
+			if mFilepath[len(mFilepath) - 1] != '/' {
+				mFilepath += "/"
+			}
+		} else if argsWithoutProg[i] == "-match" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			mMatchPattern = argsWithoutProg[i]
+			if mMatch, err := filepath.Glob(mFilepath + mMatchPattern); err != nil {
+				panic(err)
+			} else {
+				for _, k := range mMatch {
+					listOfFileName = append(listOfFileName, k)
+				}
+			}
+		}
 	}
-	listOfExposureTime := []float64{
-		32, 16, 8, 4,
-		2, 1, 0.5, 0.25,
-		0.125, 0.0625, 0.03125, 0.015625,
-		0.0078125, 0.00390625, 0.001953125, 0.0009765625,
+
+	// Read ShutterTime.txt
+	shutterInfo := make(map[string]float64)
+	var listOfExposureTime []float64
+	if shutterFile, err := os.Open(mFilepath+"ShutterTime.txt"); err != nil {
+		panic(err)
+	} else {
+		defer Common.CloseFile(shutterFile)
+
+		scanner := bufio.NewScanner(shutterFile)
+		scanner.Split(bufio.ScanLines)
+		for scanner.Scan() {
+			line := scanner.Text()
+			keyValue := strings.Split(line, " ")
+			if len(keyValue) != 2 {
+				panic("ShutterTime.txt invalid at line: " + line)
+			}
+			if shutterInfo[keyValue[0]], err = strconv.ParseFloat(keyValue[1], 64); err != nil {
+				panic(err)
+			}
+		}
 	}
-	//listOfExposureTime := []float64{
-	//	16, 8, 4, 2,
-	//	1, 0.5, 0.25, 0.125,
-	//	0.0625, 0.03125, 0.015625,
-	//}
+	if len(listOfFileName) != len(shutterInfo) {
+		panic("The num of the images is not equal to the num of the shutter time.")
+	}
+	for _, value := range listOfFileName {
+		_, fileName := filepath.Split(value)
+		if shutterTime, exist := shutterInfo[fileName]; !exist {
+			panic("Image [" + fileName + "] is not exist in the ShutterTime.txt")
+		} else {
+			listOfExposureTime = append(listOfExposureTime, shutterTime)
+		}
+	}
 
 	if err := HDR.RecoverHdrImageWithExposureTime(
 					listOfFileName,

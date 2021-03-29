@@ -1,0 +1,13 @@
+img01.jpg 16
+img02.jpg 8
+img03.jpg 4
+img04.jpg 2
+img05.jpg 1
+img06.jpg 0.5
+img07.jpg 0.33
+img08.jpg 0.25
+img09.jpg 0.015625
+img10.jpg 0.0125
+img11.jpg 0.003125
+img12.jpg 0.0025
+img13.jpg 0.001
