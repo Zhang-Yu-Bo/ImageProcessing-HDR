@@ -18,6 +18,10 @@ go build main.go
 ```
 
 ## How to run
+* There are two arguments that must be filled in: -path, -match
+```commandline
+main.exe -path ./Images/Memorial -match *.png
+```
 
 ## Reference
 * [HDR Tools](https://ttic.uchicago.edu/~cotter/projects/hdr_tools/)

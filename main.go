@@ -4,6 +4,7 @@ import (
 	"ImageProcessing_HDR/Modules/HDR"
 	"ImageProcessing_HDR/Modules/HDR/Common"
 	"bufio"
+	"fmt"
 	"math"
 	"os"
 	"path/filepath"
@@ -59,6 +60,82 @@ func main() {
 				for _, k := range mMatch {
 					listOfFileName = append(listOfFileName, k)
 				}
+			}
+		} else if argsWithoutProg[i] == "-samples" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			var err error
+			numOfSampling, err = strconv.Atoi(argsWithoutProg[i])
+			if err != nil {
+				fmt.Println(err)
+				numOfSampling = 900
+			}
+		} else if argsWithoutProg[i] == "-alpha" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			var err error
+			alpha, err = strconv.ParseFloat(argsWithoutProg[i], 64)
+			if err != nil {
+				fmt.Println(err)
+				alpha = 1 / (2 * math.Sqrt2)
+			}
+		} else if argsWithoutProg[i] == "-ratio" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			var err error
+			ratio, err = strconv.ParseFloat(argsWithoutProg[i], 64)
+			if err != nil {
+				fmt.Println(err)
+				ratio = 1.6
+			}
+		} else if argsWithoutProg[i] == "-epsilon" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			var err error
+			epsilon, err = strconv.ParseFloat(argsWithoutProg[i], 64)
+			if err != nil {
+				fmt.Println(err)
+				epsilon = 0.05
+			}
+		} else if argsWithoutProg[i] == "-phi" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			var err error
+			phi, err = strconv.ParseFloat(argsWithoutProg[i], 64)
+			if err != nil {
+				fmt.Println(err)
+				phi = 15.0
+			}
+		} else if argsWithoutProg[i] == "-a" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			var err error
+			a, err = strconv.ParseFloat(argsWithoutProg[i], 64)
+			if err != nil {
+				fmt.Println(err)
+				a = 0.45
+			}
+		} else if argsWithoutProg[i] == "-tmoAction" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			if argsWithoutProg[i] == "local" {
+				tmoAction = Common.LocalToneMapping
+			} else {
+				tmoAction = Common.GlobalToneMapping
+			}
+		} else if argsWithoutProg[i] == "-tmoType" {
+			CheckArgusIsEnough(&i, argsLen)
+
+			if argsWithoutProg[i] == "reinhard" {
+				tmoType = Common.Reinhard
+			} else if argsWithoutProg[i] == "ce"{
+				tmoType = Common.CE
+			} else if argsWithoutProg[i] == "uncharted2"{
+				tmoType = Common.Uncharted2
+			} else if argsWithoutProg[i] == "reinhard_enhance"{
+				tmoType = Common.ReinhardEnhance
+			} else {
+				tmoType = Common.Aces
 			}
 		}
 	}
