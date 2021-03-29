@@ -5,6 +5,8 @@ import (
 	"ImageProcessing_HDR/Modules/HDR/DebevecMalik"
 	"ImageProcessing_HDR/Modules/ToneMapping"
 	"errors"
+	_ "image/jpeg"
+	_ "image/png"
 )
 
 type hdrState int
