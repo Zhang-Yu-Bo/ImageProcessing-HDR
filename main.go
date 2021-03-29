@@ -4,7 +4,7 @@ import (
 	"ImageProcessing_HDR/Modules/HDR"
 	"ImageProcessing_HDR/Modules/HDR/Common"
 	"bufio"
-	"fmt"
+	"math"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -23,6 +23,14 @@ func main() {
 	var mFilepath string
 	var mMatchPattern string
 	var listOfFileName []string
+	numOfSampling := 900
+	alpha := 1 / (2 * math.Sqrt2)
+	ratio := 1.6
+	epsilon := 0.05
+	phi := 15.0
+	a := 0.45
+	tmoAction := Common.GlobalToneMapping
+	tmoType := Common.Aces
 
 	// Read arguments
 	// ex1: ./main.exe -path ./Images/Memorial -match *.png
@@ -69,7 +77,7 @@ func main() {
 			line := scanner.Text()
 			keyValue := strings.Split(line, " ")
 			if len(keyValue) != 2 {
-				panic("ShutterTime.txt invalid at line: " + line)
+				panic("ShutterTime.txt invalid format at line: " + line)
 			}
 			if shutterInfo[keyValue[0]], err = strconv.ParseFloat(keyValue[1], 64); err != nil {
 				panic(err)
@@ -88,12 +96,21 @@ func main() {
 		}
 	}
 
-	if err := HDR.RecoverHdrImageWithExposureTime(
-					listOfFileName,
-					listOfExposureTime,
-					900,
-					Common.LocalToneMapping,
-					Common.ReinhardEnhance); err != nil {
-		fmt.Println(err.Error())
+	// HDR Recover
+	if err := HDR.RecoverHdrByDebevecMalik(listOfFileName, listOfExposureTime, numOfSampling); err != nil {
+		panic(err)
 	}
+	// Export Hdr Image
+	if err := HDR.ExportHdrImage(); err != nil {
+		panic(err)
+	}
+	// Tone Mapping
+	if err := HDR.ToneMappingOperate(tmoAction, tmoType, alpha, ratio, epsilon, phi, a); err != nil {
+		panic(err)
+	}
+	// Export Ldr Image
+	if err:= HDR.ExportLdrImage(); err != nil {
+		panic(err)
+	}
+
 }
