@@ -24,9 +24,9 @@ go build main.go
 Use the terminal to run the HDR program which you just build. \
 And there are some arguments you should / could use.
 * Require:
- - `-path [FolderPath]` FolderPath is the dir path in which you store the images that have different exposure times.
- - `-match [FileNamePattern]` FileNamePattern is the name pattern of your images.
- - A file named `ShutterTime.txt` stores together with your test images. `ShutterTime.txt` record the exposure time of your test images. The format is one image with one line, and per line has a space between the image name and exposure time. Example:
+  - `-path [FolderPath]` FolderPath is the dir path in which you store the images that have different exposure times.
+  - `-match [FileNamePattern]` FileNamePattern is the name pattern of your images.
+  - A file named `ShutterTime.txt` stores together with your test images. `ShutterTime.txt` record the exposure time of your test images. The format is one image with one line, and per line has a space between the image name and exposure time. Example:
     
     ```text
     img01.jpg 16
