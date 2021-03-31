@@ -188,22 +188,107 @@ func ConvertImageToGocvMat(img image.Image) gocv.Mat {
 	return gocvMatFormatImg
 }
 
-func MTB() {
-	times := 4
-	for i := 0; i < times; i++ {
-		newSizeImages := []image.Image{}
-		imageNewWidth := uint(WidthOfImage / int(math.Pow(2, float64(times-i-1))))
-		fmt.Println(imageNewWidth)
-		for j := 0; j < NumOfImages; j++ {
-			newImage := resize.Resize(imageNewWidth, 0, DataOfImages[j], resize.Lanczos3)
-			gocvImage := ConvertImageToGocvMat(newImage)
-			gocv.IMWrite("togocv.png", gocvImage)
+func Gradient(img image.Image) [][]float64 {
+	im := gocv.NewMatWithSize(img.Bounds().Dy(), img.Bounds().Dx(), gocv.MatTypeCV8UC1)
+	gradient := CreateSpace2D(img.Bounds().Dy(), img.Bounds().Dx())
+	for i := 2; i < img.Bounds().Dx()-1; i++ {
+		for j := 2; j < img.Bounds().Dy()-1; j++ {
+			for x := -2; x <= 2; x++ {
+				for y := -2; y <= 2; y++ {
+					r, g, b, _ := img.At(i+x, j+y).RGBA()
+					color := r>>8 + g>>8 + b>>8
+					if x == 0 && y == 0 {
+						gradient[i][j] += float64(24 * color)
+					} else {
+						gradient[i][j] -= float64(color)
+					}
+				}
+			}
+			im.SetUCharAt(j, i, uint8(gradient[i][j]))
+		}
+	}
+	gocv.IMWrite("g.png", im)
+	return gradient
+}
 
-			gradientImage := gocv.NewMatWithSize(newImage.Bounds().Dy()+100, newImage.Bounds().Dx()+100, gocv.MatTypeCV32SC3)
-			gocv.Laplacian(gocvImage, &gradientImage, gocv.MatTypeCV32S, 5, 1, 0, gocv.BorderDefault)
-			gocv.IMWrite("gradient.png", gradientImage)
-			newSizeImages = append(newSizeImages, newImage)
+func MTB() {
+	var moveX, moveY []int
+	for j := 0; j < NumOfImages; j++ {
+		moveX = append(moveX, 0)
+		moveY = append(moveY, 0)
+	}
+	minLen := WidthOfImage
+	if HeightOfImage < WidthOfImage {
+		minLen = HeightOfImage
+	}
+	times := int(math.Log2(float64(minLen))) - 4
+	fmt.Println("times", times)
+	for i := 0; i < times; i++ {
+		scale := int(math.Pow(2, float64(times-i-1)))
+		imageNewWidth := uint(WidthOfImage / scale)
+		fmt.Println(imageNewWidth)
+		for j := 1; j < NumOfImages; j++ {
+			img1 := resize.Resize(imageNewWidth, 0, DataOfImages[j-1], resize.Lanczos3)
+			img2 := resize.Resize(imageNewWidth, 0, DataOfImages[j], resize.Lanczos3)
+			g1 := Gradient(img1)
+			g2 := Gradient(img2)
+
+			minX, minY, minDis, count := 0, 0, float64(100000000), 0
+
+			for x := -1; x <= 1; x++ {
+				for y := -1; y <= 1; y++ {
+					dis := float64(0)
+
+					for ii := 1; ii < img1.Bounds().Dx()-1; ii++ {
+						for jj := 1; jj < img1.Bounds().Dy()-1; jj++ {
+							g2i, g2j, g1i, g1j := ii+x+moveX[j]/scale, jj+y+moveY[j]/scale, ii, jj
+							if g2i < 0 || g2j < 0 || g1i < 0 || g1j < 0 || g2i >= img1.Bounds().Dx() || g2j >= img1.Bounds().Dy() || g1i >= img2.Bounds().Dx() || g1j >= img2.Bounds().Dy() {
+								continue
+							}
+							dis += math.Abs(math.Pow(g2[ii+x][jj+y]-g1[ii][jj], 2))
+							count += 1
+						}
+						if count > 0 && dis/float64(count) > minDis {
+							break
+						}
+					}
+					dis /= float64(count)
+					fmt.Println(dis, count)
+					if dis < minDis {
+						minX, minY = x, y
+						minDis = dis
+					}
+				}
+			}
+			minX *= scale
+			minY *= scale
+			fmt.Println(minX, minY, moveX[j], moveY[j])
+			moveX[j] += minX
+			moveY[j] += minY
+
 		}
 
+	}
+	moveXSum, moveYSum := 0, 0
+	var outputFile *os.File
+	for j := 1; j < NumOfImages; j++ {
+		movedImage := image.NewRGBA(image.Rect(0, 0, WidthOfImage, HeightOfImage))
+		for ii := 0; ii < WidthOfImage; ii++ {
+			for jj := 0; jj < HeightOfImage; jj++ {
+				moveXSum += moveX[j]
+				moveYSum += moveY[j]
+				oriX, oriY := ii-moveXSum, jj-moveYSum
+				if oriX < 0 || oriY < 0 || oriX >= WidthOfImage || oriY >= HeightOfImage {
+					break
+				}
+				movedImage.Set(ii, jj, DataOfImages[j].At(oriX, oriY))
+			}
+		}
+		DataOfImages[j] = movedImage
+
+		fileName := "output" + string(j+97) + ".png"
+		outputFile, _ = os.Create(fileName)
+		png.Encode(outputFile, DataOfImages[j])
+		fmt.Println(fileName)
 	}
 }
