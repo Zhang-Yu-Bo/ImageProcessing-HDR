@@ -11,9 +11,9 @@ import (
 
 type hdrState int
 
-const notInit 		hdrState = 0
-const recoverState 	hdrState = 1
-const tmoState 		hdrState = 2
+const notInit hdrState = 0
+const recoverState hdrState = 1
+const tmoState hdrState = 2
 
 var NowState = notInit
 
@@ -26,7 +26,7 @@ func RecoverHdrByDebevecMalik(fileName []string, exposureTime []float64, numOfSa
 	if err := Common.LoadImageFiles(fileName, exposureTime); err != nil {
 		return err
 	}
-
+	Common.MTB()
 	// HDR pipeline: Sampling -> Fill Matrix -> Calculate g(Zij) -> Calculate RadianceE
 	DebevecMalik.PixelSampling(Common.NumOfSamplePixels)
 	if err := DebevecMalik.GenerateFunctionGz(); err != nil {
@@ -38,12 +38,12 @@ func RecoverHdrByDebevecMalik(fileName []string, exposureTime []float64, numOfSa
 }
 
 /**
- alpha := 1 / (2 * math.Sqrt2)	// magic number
- ratio := 1.6  					// gaussian scale size ratio, 1.6較接近拉普拉斯
- epsilon := 0.05				// 誤差
- phi := 15.0 					// 整體銳度
- a := 0.45						// 整體亮度
- */
+alpha := 1 / (2 * math.Sqrt2)	// magic number
+ratio := 1.6  					// gaussian scale size ratio, 1.6較接近拉普拉斯
+epsilon := 0.05				// 誤差
+phi := 15.0 					// 整體銳度
+a := 0.45						// 整體亮度
+*/
 func ToneMappingOperate(tmoAction Common.TmoAction, tmoType Common.TmoType, alpha, ratio, epsilon, phi, a float64) error {
 	if NowState == notInit {
 		return errors.New("There is no hdr data. ")

@@ -3,10 +3,13 @@ package Common
 import (
 	"errors"
 	"fmt"
-	"gocv.io/x/gocv"
 	"image"
 	"image/png"
+	"math"
 	"os"
+
+	"github.com/nfnt/resize"
+	"gocv.io/x/gocv"
 )
 
 type Vec2 struct {
@@ -15,42 +18,44 @@ type Vec2 struct {
 }
 
 const (
-	ColorRed			= 0
-	ColorGreen			= 1
-	ColorBlue			= 2
+	ColorRed   = 0
+	ColorGreen = 1
+	ColorBlue  = 2
 )
 
 type TmoAction int
-const LocalToneMapping 	TmoAction = 3
+
+const LocalToneMapping TmoAction = 3
 const GlobalToneMapping TmoAction = 4
 
 type TmoType int
-const Aces 				TmoType = 5
-const Reinhard 			TmoType = 6
-const CE 				TmoType = 7
-const Uncharted2 		TmoType = 8
-const ReinhardEnhance 	TmoType = 9
+
+const Aces TmoType = 5
+const Reinhard TmoType = 6
+const CE TmoType = 7
+const Uncharted2 TmoType = 8
+const ReinhardEnhance TmoType = 9
 
 var (
 	// 總共取幾點去計算 g(Zij)
-	NumOfSamplePixels	int
-	NumOfImages 		int
-	WidthOfImage  		int
-	HeightOfImage 		int
-	DataOfImages		[]image.Image
-	ExposureTimes		[]float64
+	NumOfSamplePixels int
+	NumOfImages       int
+	WidthOfImage      int
+	HeightOfImage     int
+	DataOfImages      []image.Image
+	ExposureTimes     []float64
 	// RadianceE: 0 -> R, 1 -> G, 2 -> B
 	// RadianceE[]: x(width, col) RadianceE[][]: y(height, row)
-	RadianceE			[][][]float64
+	RadianceE [][][]float64
 	// LumMatrix[]: x(width, col) LumMatrix[][]: y(height, row)
-	LumMatrix 			[][]float64
-	LumWhite  			float64
+	LumMatrix [][]float64
+	LumWhite  float64
 	// OriginLum[]: x(width, col) OriginLum[][]: y(height, row)
-	OriginLum   		[][]float64
+	OriginLum [][]float64
 	// LocalLumMatrix[]: x(width, col) LocalLumMatrix[][]: y(height, row)
-	LocalLumMatrix 		[][]float64
-	GlobalLumAvg		float64
-	OutputImage 		*image.RGBA
+	LocalLumMatrix [][]float64
+	GlobalLumAvg   float64
+	OutputImage    *image.RGBA
 )
 
 func LoadImageFiles(fileName []string, exposureTime []float64) error {
@@ -99,7 +104,7 @@ func Clipping(color float64) float64 {
 	return color
 }
 
-func SaveAsPng() error{
+func SaveAsPng() error {
 	var err error
 	var outputFile *os.File
 
@@ -165,4 +170,40 @@ func CreateSpace3D(rows, cols, depth int) [][][]float64 {
 		result = append(result, temp)
 	}
 	return result
+}
+
+func ConvertImageToGocvMat(img image.Image) gocv.Mat {
+	gocvMatFormatImg := gocv.NewMatWithSize(img.Bounds().Dy(), img.Bounds().Dx(), gocv.MatTypeCV32SC3)
+	for i := 0; i < img.Bounds().Dx(); i++ {
+		for j := 0; j < img.Bounds().Dy(); j++ {
+			r, g, b, _ := img.At(i, j).RGBA()
+			// Blue
+			gocvMatFormatImg.SetIntAt(j, i*3+0, int32(b>>8))
+			// Green
+			gocvMatFormatImg.SetIntAt(j, i*3+1, int32(g>>8))
+			// Red
+			gocvMatFormatImg.SetIntAt(j, i*3+2, int32(r>>8))
+		}
+	}
+	return gocvMatFormatImg
+}
+
+func MTB() {
+	times := 4
+	for i := 0; i < times; i++ {
+		newSizeImages := []image.Image{}
+		imageNewWidth := uint(WidthOfImage / int(math.Pow(2, float64(times-i-1))))
+		fmt.Println(imageNewWidth)
+		for j := 0; j < NumOfImages; j++ {
+			newImage := resize.Resize(imageNewWidth, 0, DataOfImages[j], resize.Lanczos3)
+			gocvImage := ConvertImageToGocvMat(newImage)
+			gocv.IMWrite("togocv.png", gocvImage)
+
+			gradientImage := gocv.NewMatWithSize(newImage.Bounds().Dy()+100, newImage.Bounds().Dx()+100, gocv.MatTypeCV32SC3)
+			gocv.Laplacian(gocvImage, &gradientImage, gocv.MatTypeCV32S, 5, 1, 0, gocv.BorderDefault)
+			gocv.IMWrite("gradient.png", gradientImage)
+			newSizeImages = append(newSizeImages, newImage)
+		}
+
+	}
 }
