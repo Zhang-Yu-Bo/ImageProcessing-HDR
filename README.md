@@ -53,6 +53,7 @@ And there are some arguments you should / could use.
   - `-a [A]` The value to control the brightness of the LDR image. A is a float, and the default is `0.45`
   - `-tmoAction [Action]` Use `local / global` tone mapping. Action is a string, and the default is `global`. There are 2 actions of tone mapping methods: "local" and "global". Note that "local" is a time-consuming method, you might wait more than 5 minutes. 
   - `-tmoType [Type]` Use `reinhard / ce / uncharted2 / reinhard_enhance / aces` tone mapping. Type is a string, and the default is `aces`. There are 5 types of tone mapping methods: "reinhard", "ce", "uncharted2", "reinhard_enhance" and "aces". Note that "reinhard_enhance" only use in the "local" action.
+  - `MTB` Use `True / False` Turn on or off mtb. default is `False`.
 * Example:
 
   ```text
