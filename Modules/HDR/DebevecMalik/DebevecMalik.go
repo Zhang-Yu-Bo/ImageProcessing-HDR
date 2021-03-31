@@ -3,23 +3,24 @@ package DebevecMalik
 import (
 	"ImageProcessing_HDR/Modules/HDR/Common"
 	"fmt"
-	"gonum.org/v1/gonum/mat"
 	"math"
 	"math/rand"
 	"runtime"
 	"sync"
 	"time"
+
+	"gonum.org/v1/gonum/mat"
 )
 
 var (
-	samplePixels 	[]Common.Vec2
+	samplePixels []Common.Vec2
 	// functionGz: 0 -> R, 1 -> G, 2 -> B
 	// functionGz[]: g(Z0) g(Z1) ... g(Z255)
-	functionGz		[][]float64
+	functionGz [][]float64
 )
 
 func weightValue(value float64) float64 {
-	middle := value-128
+	middle := value - 128
 	// 二次曲線
 	return -middle*middle/65 + 256
 }
@@ -156,7 +157,7 @@ func CalculateRadianceE() {
 	Common.RadianceE = [][][]float64{}
 
 	// initialization [Common.RadianceE]
-	for c:=0; c < 3; c++ {
+	for c := 0; c < 3; c++ {
 		var tempRadianceSlice [][]float64
 		for i := 0; i < Common.WidthOfImage; i++ {
 			var tempE []float64

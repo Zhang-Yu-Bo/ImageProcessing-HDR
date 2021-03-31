@@ -1,22 +1,23 @@
 <style> 
 /* * { font-family: "Times New Roman",    */
-/* table, th, td { border: 0px; }
-img { width: 50%; }
-h1#imageprocessing-hdr table img { width: 130px; } */
+/* table, th, td { border: 0px; } */
+img { width: 300px; }
+/* h1#imageprocessing-hdr table img { width: 130px; }  */
 </style>
 # ImageProcessing HDR
 
 ## 實作項目
 
-* [HDR](#hdr)
-* Tone Mapping
-  * [Global Tone Mapping](#global-tone-mapping)
-    * ACES
-    * Reinhard
-    * CE
-    * Uncharted2
-  * [Local Tone Mapping](#local-tone-mapping)
-    * Photographic
+* [ImageProcessing HDR](#imageprocessing-hdr)
+  * [實作項目](#實作項目)
+  * [輸入圖片](#輸入圖片)
+  * [成果展示](#成果展示)
+    * [HDR](#hdr)
+      * [概念](#概念)
+      * [HDR 演算法設計](#hdr-演算法設計)
+    * [Tone Mapping](#tone-mapping)
+      * [Global Tone Mapping](#global-tone-mapping)
+      * [Local Tone Mapping](#local-tone-mapping)
 
 ## 輸入圖片
 

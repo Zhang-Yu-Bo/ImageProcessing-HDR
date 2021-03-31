@@ -44,7 +44,7 @@ func uncharted2Function(x float64) float64 {
 
 // [white] 為自定義變數: 甚麼值是白色，越大通常整體越暗
 func Uncharted2(color float64, lumAvg float64, white float64) float64 {
-	return uncharted2Function(1.6 * lumAvg * color) / uncharted2Function(white)
+	return uncharted2Function(1.6*lumAvg*color) / uncharted2Function(white)
 }
 
 func CalculateGlobalLumAvg() {
@@ -146,7 +146,7 @@ func GenerateLocalLumAvgMatrix(alpha, ratio, epsilon, phi, a float64) {
 				for j := 0; j < Common.HeightOfImage; j++ {
 					r1Sum := 0.0
 					r2Sum := 0.0
-					for m :=0; m < kernelSize; m++{
+					for m := 0; m < kernelSize; m++ {
 						for n := 0; n < kernelSize; n++ {
 							var newX, newY = m - kernelSize/2 + i, n - kernelSize/2 + j
 							if newX < 0 {
@@ -156,7 +156,7 @@ func GenerateLocalLumAvgMatrix(alpha, ratio, epsilon, phi, a float64) {
 							}
 							if newY < 0 {
 								newY = 0
-							}else if newY >= Common.HeightOfImage {
+							} else if newY >= Common.HeightOfImage {
 								newY = Common.HeightOfImage - 1
 							}
 							r1Sum += R1[m][n][k] * Common.OriginLum[newX][newY]
@@ -176,7 +176,7 @@ func GenerateLocalLumAvgMatrix(alpha, ratio, epsilon, phi, a float64) {
 	for i := 0; i < Common.WidthOfImage; i++ {
 		for j := 0; j < Common.HeightOfImage; j++ {
 			ss := 1.0
-			for k := 1; k < 10;k++ {
+			for k := 1; k < 10; k++ {
 				if math.Abs(V[i][j][k-1]) < epsilon {
 					break
 				}
@@ -188,7 +188,7 @@ func GenerateLocalLumAvgMatrix(alpha, ratio, epsilon, phi, a float64) {
 			if p > 8 {
 				p = 8
 			}
-			Common.LocalLumMatrix[i][j] = Common.OriginLum[i][j]/(1+V1[i][j][int(p)])
+			Common.LocalLumMatrix[i][j] = Common.OriginLum[i][j] / (1 + V1[i][j][int(p)])
 		}
 	}
 	fmt.Println("Generate Local LumAvg Matrix End:", time.Now().Sub(nowTime))
