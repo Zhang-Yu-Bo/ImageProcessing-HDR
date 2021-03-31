@@ -17,7 +17,7 @@ const tmoState hdrState = 2
 
 var NowState = notInit
 
-func RecoverHdrByDebevecMalik(fileName []string, exposureTime []float64, numOfSampling int) error {
+func RecoverHdrByDebevecMalik(fileName []string, exposureTime []float64, numOfSampling int, mtb bool) error {
 	Common.NumOfSamplePixels = numOfSampling
 	Common.NumOfImages = len(fileName)
 	if Common.NumOfImages != len(exposureTime) {
@@ -26,7 +26,9 @@ func RecoverHdrByDebevecMalik(fileName []string, exposureTime []float64, numOfSa
 	if err := Common.LoadImageFiles(fileName, exposureTime); err != nil {
 		return err
 	}
-	Common.MTB()
+	if mtb {
+		Common.MTB()
+	}
 	// HDR pipeline: Sampling -> Fill Matrix -> Calculate g(Zij) -> Calculate RadianceE
 	DebevecMalik.PixelSampling(Common.NumOfSamplePixels)
 	if err := DebevecMalik.GenerateFunctionGz(); err != nil {
